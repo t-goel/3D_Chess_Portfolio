@@ -1,2 +1,304 @@
-/* Scene 1 — Placard styles */
-/* Built in Phase 1, Step 4 */
+/* Scene 1 — Placard
+   Styled as an aged tournament announcement card.
+   Warm parchment tones, serif type, inset shadow for paper aging. */
+
+/* ── Outer container ─────────────────────────────────────────────────────── */
+#placard {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    /* Warm near-black — matches landing base */
+    background: #080402;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.4s ease-in;
+}
+
+#placard.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#placard.fading-out {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+}
+
+/* ── The card ────────────────────────────────────────────────────────────── */
+.placard-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    text-align: center;
+    user-select: none;
+
+    /* Aged paper background */
+    background-color: #F5E6C8;
+
+    padding: clamp(36px, 5.5vh, 64px) clamp(32px, 5.5vw, 80px) clamp(28px, 4.5vh, 56px);
+    width: min(92vw, 960px);
+
+    /* Paper aging: inset shadow simulates wear & foxing at corners */
+    box-shadow:
+        inset 0 0 100px rgba(0, 0, 0, 0.15),
+        inset 0 0 30px rgba(0, 0, 0, 0.06),
+        0 12px 60px rgba(0, 0, 0, 0.65),
+        0 4px 16px rgba(0, 0, 0, 0.4);
+
+    /* Slight imperfect rotation — hand-placed feel */
+    transform: rotate(-0.3deg);
+
+    /* Entrance animation — delay bumped to let the container fade settle first */
+    opacity: 0;
+    transform: rotate(-0.3deg) translateY(12px);
+    transition: opacity 1.0s ease-out 0.4s, transform 1.0s ease-out 0.4s;
+}
+
+#placard.visible .placard-card {
+    opacity: 1;
+    transform: rotate(-0.3deg) translateY(0);
+}
+
+/* Layer 1 — Fine paper grain (soft-light) */
+.placard-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    opacity: 0.12;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+}
+
+/* Layer 2 — Broad aging spots (multiply for dark staining) */
+.placard-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.12' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 600px 600px;
+    opacity: 0.08;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────────── */
+/* All text sits above the pseudo-element grain layers */
+.placard-card>* {
+    position: relative;
+    z-index: 1;
+}
+
+/* "IBM Man-Machine Challenge — May 11, 1997 — Game 6" */
+.placard-event {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(0.55rem, 1vw, 0.75rem);
+    font-weight: 400;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #6B5A42;
+    margin-bottom: 28px;
+    line-height: 1.6;
+}
+
+/* Thin ornamental rule below event line */
+.placard-rule {
+    width: 48px;
+    height: 1px;
+    background: rgba(107, 90, 66, 0.4);
+    margin-bottom: 28px;
+}
+
+/* "Match Score: 2½ – 2½" */
+.placard-score {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(0.9rem, 1.8vw, 1.15rem);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: #4A3C2A;
+    margin-bottom: 24px;
+}
+
+/* "Garry Kasparov vs. Deep Blue" — always side-by-side */
+.placard-matchup {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    /* gap scales with viewport so the row never wraps */
+    gap: clamp(6px, 1.8vw, 24px);
+    flex-wrap: nowrap;
+    width: 100%;
+    margin-bottom: 16px;
+    line-height: 1.2;
+}
+
+/* Each player name scales freely so the row fits any viewport width */
+.placard-player {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1rem, 3.2vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #1C0F06;
+    white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* "vs." — never shrinks or wraps */
+.placard-matchup .vs {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(0.6rem, 1.4vw, 1rem);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    color: #6B5A42;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* "You play as Kasparov." */
+.placard-role {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(0.8rem, 1.4vw, 1rem);
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 0.06em;
+    color: #5D4B35;
+    margin-bottom: 40px;
+}
+
+/* ── Bottom section: button + loading ────────────────────────────────────── */
+.placard-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+/* "Begin" button */
+.placard-begin {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(0.7rem, 1.2vw, 0.85rem);
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #4A3C2A;
+    background: transparent;
+    border: 1px solid rgba(107, 90, 66, 0.45);
+    padding: 12px 44px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: opacity 0.6s ease, border-color 0.4s ease, color 0.4s ease;
+
+    /* Initially dimmed and non-interactive */
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Enabled state — set by JS when loading completes */
+.placard-begin.enabled {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.placard-begin.enabled:hover {
+    border-color: rgba(107, 90, 66, 0.8);
+    color: #1C0F06;
+}
+
+/* Subtle fill sweep on hover */
+.placard-begin::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(107, 90, 66, 0.08);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.placard-begin.enabled:hover::before {
+    transform: scaleX(1);
+}
+
+/* ── Loading indicator ───────────────────────────────────────────────────── */
+.placard-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: #8A7A64;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.placard-loading.visible {
+    opacity: 1;
+}
+
+/* Chess piece icon — use ♔ as the loading icon */
+.placard-loading-icon {
+    display: inline-block;
+    font-size: 1rem;
+    animation: placard-loading-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes placard-loading-pulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+
+/* ── Decorative corner marks (optional aged print detail) ────────────────── */
+.placard-corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: rgba(107, 90, 66, 0.25);
+    border-style: solid;
+    z-index: 1;
+}
+
+.placard-corner--tl {
+    top: 16px;
+    left: 16px;
+    border-width: 1px 0 0 1px;
+}
+
+.placard-corner--tr {
+    top: 16px;
+    right: 16px;
+    border-width: 1px 1px 0 0;
+}
+
+.placard-corner--bl {
+    bottom: 16px;
+    left: 16px;
+    border-width: 0 0 1px 1px;
+}
+
+.placard-corner--br {
+    bottom: 16px;
+    right: 16px;
+    border-width: 0 1px 1px 0;
+}
