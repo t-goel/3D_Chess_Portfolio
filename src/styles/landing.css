@@ -1,2 +1,185 @@
-/* Scene 0 — Landing styles */
-/* Built in Phase 1, Step 3 */
+/* Scene 0 — Landing */
+
+/* ── Outer container ─────────────────────────────────────────────────────── */
+#landing {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  /* Base darkness — warm near-black so black is never cold */
+  background: #080402;
+
+  /* Hard edge vignette: uniform dark ring from all sides */
+  box-shadow: inset 0 0 340px rgba(4, 1, 0, 0.85);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease-in;
+}
+
+#landing.visible   { opacity: 1; pointer-events: auto; }
+#landing.fading-out {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+/* Asymmetric light pool — single overhead source, slightly right of center.
+   Layered on top of the board but under the plaque (z-index: 1).
+   The ellipse center at 53%/41% means light pools up and right — not perfect. */
+#landing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse 60% 52% at 53% 41%,
+    transparent      0%,
+    transparent     22%,
+    rgba(5, 2, 0, 0.42)  55%,
+    rgba(5, 2, 0, 0.84) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Board layer ─────────────────────────────────────────────────────────── */
+/* Separate div so filter: url(#board-warp) only warps the checkerboard,
+   never the plaque or text above it. */
+.landing-board {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  --sq:    110px;
+  --dark:  #6B4226;
+  --light: #D4A76A;
+
+  background-color: var(--dark);
+  background-image:
+    linear-gradient(45deg,  var(--light) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--light) 25%, transparent 25%),
+    linear-gradient(45deg,  transparent 75%, var(--light) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--light) 75%);
+  background-size: var(--sq) var(--sq);
+  background-position:
+    0 0,
+    0 calc(var(--sq) / 2),
+    calc(var(--sq) / 2) calc(-1 * var(--sq) / 2),
+    calc(-1 * var(--sq) / 2) 0;
+
+  /* Displacement warp — breaks the perfect 45° geometry into something organic.
+     SVG filter defined in JS (id="board-warp"), injected once into <body>. */
+  filter: url(#board-warp);
+}
+
+/* Layer 1 — Fine surface grain (soft-light: brightens highlights, deepens shadows) */
+.landing-board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+/* Layer 2 — Large slow turbulence (multiply: dark patches = uneven light absorption).
+   Low frequency creates broad worn areas, not fine noise. */
+.landing-board::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.15' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 600px 600px;
+  opacity: 0.20;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* ── Central plaque ──────────────────────────────────────────────────────── */
+.landing-content {
+  position: relative;
+  z-index: 2;        /* above board (0) and vignette overlay (1) */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  text-align: center;
+  user-select: none;
+
+  background-color: #1C0F06;
+
+  /* Asymmetric padding — wider right, slightly more top than bottom.
+     Real plaques aren't measured to the millimeter. */
+  padding: 48px 84px 40px 76px;
+
+  border: 1px solid rgba(212, 167, 106, 0.55);
+  outline: 4px solid rgba(212, 167, 106, 0.12);
+  outline-offset: 6px;
+
+  /* Fractional tilt — physically placed, not pixel-perfect rendered */
+  transform: rotate(-0.4deg);
+}
+
+/* Plaque grain — higher base frequency than board grain so it reads as a
+   finer, more polished material. */
+.landing-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  opacity: 0.18;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.landing-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #F5E8D0;
+  line-height: 1;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  /* Lit from below — board warmth bleeds up into the lettering */
+  text-shadow:
+    1px 1px 3px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(212, 167, 106, 0.15);
+}
+
+.landing-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(0.65rem, 1.2vw, 0.85rem);
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  color: rgba(245, 232, 208, 0.65);
+  text-transform: uppercase;
+  margin-right: -0.42em;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.landing-divider {
+  width: 40px;
+  height: 1px;
+  background: rgba(212, 167, 106, 0.4);
+  margin: 22px auto;
+}
+
+/* JS flicker replaces CSS animation — no animation property here.
+   Opacity is set directly via el.style.opacity in startFlicker(). */
+.landing-prompt {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(0.6rem, 1vw, 0.75rem);
+  font-weight: 400;
+  letter-spacing: 0.32em;
+  color: rgba(245, 232, 208, 0.75);
+  text-transform: uppercase;
+  margin-right: -0.32em;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6);
+}
