@@ -209,6 +209,20 @@
 .placard-begin.enabled {
     opacity: 1;
     pointer-events: auto;
+    animation: placard-btn-appear 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes placard-btn-appear {
+    from {
+        opacity: 0.3;
+        transform: scale(0.96);
+        letter-spacing: 0.22em;
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+        letter-spacing: 0.3em;
+    }
 }
 
 .placard-begin.enabled:hover {

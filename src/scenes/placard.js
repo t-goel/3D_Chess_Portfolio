@@ -9,8 +9,8 @@ export function createPlacardScene(stateManager) {
   let beginBtn = null;
   let loadingEl = null;
   let onBeginClick = null;
-  let loadingTimer = null;
   let showLoadingTimer = null;
+  let preloadCancelled = false;
 
   // ── Build DOM ──────────────────────────────────────────────────────────────
   function build() {
@@ -79,20 +79,28 @@ export function createPlacardScene(stateManager) {
     document.getElementById('app').appendChild(rootEl);
   }
 
-  // ── Simulate preload / hook for future Three.js loading ────────────────
-  // In Phase 2+ this will be replaced by real asset loading.
-  // For now: wait ~1.8s, then enable the button.
+  // ── Asset loading hook ──────────────────────────────────────────────────
+  // Phase 2: replace this function with real Three.js asset loading.
+  // Must return a Promise that resolves when assets are ready.
+  function loadThreeAssets() {
+    return new Promise((resolve) => setTimeout(resolve, 1800));
+  }
+
+  // ── Preload orchestration ───────────────────────────────────────────────
   function startPreload() {
-    // Show the loading indicator if it takes more than 2 seconds
+    preloadCancelled = false;
+
+    // Show the loading indicator if loading takes more than 2 seconds
     showLoadingTimer = setTimeout(() => {
       if (loadingEl) loadingEl.classList.add('visible');
     }, 2000);
 
-    loadingTimer = setTimeout(() => {
+    loadThreeAssets().then(() => {
+      if (preloadCancelled) return;
       clearTimeout(showLoadingTimer);
       if (loadingEl) loadingEl.classList.remove('visible');
       enableBeginButton();
-    }, 1800);
+    });
   }
 
   function enableBeginButton() {
@@ -123,7 +131,7 @@ export function createPlacardScene(stateManager) {
     },
 
     exit() {
-      clearTimeout(loadingTimer);
+      preloadCancelled = true;
       clearTimeout(showLoadingTimer);
       if (beginBtn && onBeginClick) {
         beginBtn.removeEventListener('click', onBeginClick);
