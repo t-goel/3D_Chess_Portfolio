@@ -133,9 +133,6 @@ Good search terms: "chess set lowpoly glb", "minimal chess pieces", "geometric c
 
 Alternative sources: Poly Pizza (poly.pizza, all CC0), CGTrader free section, Turbosquid free section.
 
-**Option B — Model in Blender.**
-Each chess piece is a lathe shape: draw a 2D profile silhouette and revolve it 360°. Use 8-12 sides for the revolution (low-poly look). The knight is the hardest — simplify it to an angular horse-head silhouette. Export each piece as a separate GLB file. YouTube search: "blender low poly chess pieces tutorial." Estimated time: 2-4 hours if you know Blender basics, 6-8 hours if learning from scratch.
-
 **Option C — Procedural in Three.js (fallback).**
 Build pieces from combined primitives:
 - Pawn: `SphereGeometry` (head) + `CylinderGeometry` (body, tapered) + `CylinderGeometry` (base, wider)
