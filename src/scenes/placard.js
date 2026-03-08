@@ -3,6 +3,11 @@
 // "Begin" button starts dimmed; it enables after a simulated preload delay.
 
 import '../styles/placard.css';
+import { loadPieceGeometries } from '../three/pieces.js';
+
+// Shared reference — loaded geometries are passed to the game scene
+let loadedGeometries = null;
+export function getLoadedGeometries() { return loadedGeometries; }
 
 export function createPlacardScene(stateManager) {
   let rootEl = null;
@@ -80,10 +85,10 @@ export function createPlacardScene(stateManager) {
   }
 
   // ── Asset loading hook ──────────────────────────────────────────────────
-  // Phase 2: replace this function with real Three.js asset loading.
-  // Must return a Promise that resolves when assets are ready.
   function loadThreeAssets() {
-    return new Promise((resolve) => setTimeout(resolve, 1800));
+    return loadPieceGeometries().then((geometries) => {
+      loadedGeometries = geometries;
+    });
   }
 
   // ── Preload orchestration ───────────────────────────────────────────────

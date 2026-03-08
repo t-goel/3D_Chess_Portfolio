@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { placePieces, squareToPosition } from '../three/pieces.js';
+import { getLoadedGeometries } from './placard.js';
 
 const DARK_SQUARE  = '#5C3A21';
 const LIGHT_SQUARE = '#F0D9B5';
@@ -104,16 +106,107 @@ function createTable() {
   return group;
 }
 
+// ---------- Deep Blue figurine ----------
+// A dark metallic monolith sitting on the white side of the table,
+// representing the computer opponent. Two geometries: body + inset panel.
+
+const TABLE_TOP_Y = TABLE_Y + TABLE_H / 2; // = -0.15 (flush with board bottom)
+
+function createDeepBlueFigurine() {
+  const group = new THREE.Group();
+
+  // Dark steel body — visible but not bright; slight blue tint for "Deep Blue"
+  const monolithMat = new THREE.MeshStandardMaterial({
+    color:     '#1c2a3a',
+    metalness: 0.85,
+    roughness: 0.15,
+    emissive:  '#0a1520',
+    emissiveIntensity: 0.3,
+  });
+
+  // Main body — tall narrow monolith, 2× bigger than before
+  const bodyH = 2.2;
+  const body  = new THREE.Mesh(new THREE.BoxGeometry(0.8, bodyH, 0.3), monolithMat);
+  body.position.y = bodyH / 2;
+  body.castShadow    = true;
+  body.receiveShadow = true;
+  group.add(body);
+
+  // Glowing blue face panel — the "screen"
+  const panelMat = new THREE.MeshStandardMaterial({
+    color:             '#051030',
+    metalness:         0.4,
+    roughness:         0.5,
+    emissive:          '#1040c0',
+    emissiveIntensity: 1.2,
+  });
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.3, 0.04), panelMat);
+  panel.position.set(0, bodyH * 0.50, 0.17);
+  group.add(panel);
+
+  // Sit on the table, centred x, just behind the white-side board border
+  group.position.set(0, TABLE_TOP_Y, -4.8);
+
+  return group;
+}
+
+// ---------- piece highlight system ----------
+// Returns { objects, tweens } so the caller can clean up on exit.
+
+const HIGHLIGHT_Y = 0.17; // just above board surface (0.15)
+
+function createHighlights(scene, fromSquare, toSquare) {
+  const objects = [];
+  const tweens  = [];
+
+  // ── Source ring — pulsing gold torus beneath the piece to move ──
+  const ringMat = new THREE.MeshBasicMaterial({
+    color:       '#FFD700',
+    transparent: true,
+    opacity:     0.8,
+  });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 24), ringMat);
+  const fromPos = squareToPosition(fromSquare);
+  ring.position.set(fromPos.x, HIGHLIGHT_Y, fromPos.z);
+  ring.rotation.x = -Math.PI / 2; // lay flat on board
+  scene.add(ring);
+  objects.push(ring);
+
+  tweens.push(
+    gsap.to(ringMat, { opacity: 0.2, duration: 1, yoyo: true, repeat: -1, ease: 'sine.inOut' }),
+  );
+
+  // ── Destination square — semi-transparent glowing plane ──
+  const destMat = new THREE.MeshBasicMaterial({
+    color:       '#FFD700',
+    transparent: true,
+    opacity:     0.25,
+    depthWrite:  false,
+  });
+  const dest = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 0.88), destMat);
+  const toPos = squareToPosition(toSquare);
+  dest.position.set(toPos.x, HIGHLIGHT_Y, toPos.z);
+  dest.rotation.x = -Math.PI / 2;
+  scene.add(dest);
+  objects.push(dest);
+
+  tweens.push(
+    gsap.to(destMat, { opacity: 0.05, duration: 1, yoyo: true, repeat: -1, ease: 'sine.inOut', delay: 0.5 }),
+  );
+
+  return { objects, tweens };
+}
+
 // ---------- scene setup ----------
 
 function setupScene() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#0A0A0A');
 
-  // Very dim ambient — void is dark but not absolute black (physical units: lux)
-  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  // Ambient fill — bright enough to read dark pieces clearly
+  scene.add(new THREE.AmbientLight(0xffffff, 0.9));
 
-  // SpotLight — physical units (candela). Starts at 0, animated to 150 on enter.
+  // SpotLight — physical units (candela). Starts at 0, animated to 250 on enter.
   const spotlight = new THREE.SpotLight(0xfff5e0, 0);
   spotlight.position.set(0, 10, 0);
   spotlight.angle   = 0.6;       // ~34° half-angle — tight cone
@@ -128,6 +221,7 @@ function setupScene() {
 
   scene.add(createBoard());
   scene.add(createTable());
+  scene.add(createDeepBlueFigurine());
 
   return { scene, spotlight };
 }
@@ -144,12 +238,14 @@ function createCamera() {
 // ---------- scene factory ----------
 
 export function createGameScene(stateManager) {
-  let containerEl = null;
-  let renderer    = null;
-  let scene       = null;
-  let camera      = null;
-  let spotlight   = null;
-  let rafId       = null;
+  let containerEl   = null;
+  let renderer      = null;
+  let scene         = null;
+  let camera        = null;
+  let spotlight     = null;
+  let rafId         = null;
+  let pieceRegistry = null;
+  let highlights    = null; // { objects, tweens }
 
   function setupRenderer() {
     containerEl = document.createElement('div');
@@ -173,6 +269,17 @@ export function createGameScene(stateManager) {
 
     ({ scene, spotlight } = setupScene());
     camera = createCamera();
+
+    // Place chess pieces if geometries were preloaded
+    const geometries = getLoadedGeometries();
+    if (geometries && !pieceRegistry) {
+      pieceRegistry = placePieces(scene, geometries);
+    }
+
+    // Highlight first move: black c7 pawn → c6
+    if (!highlights) {
+      highlights = createHighlights(scene, 'c7', 'c6');
+    }
   }
 
   function tick() {
@@ -197,7 +304,7 @@ export function createGameScene(stateManager) {
 
       // Light fades in over 2s — spotlight starts at 0 to support re-entry
       spotlight.intensity = 0;
-      gsap.to(spotlight, { intensity: 150, duration: 2, ease: 'power2.inOut' });
+      gsap.to(spotlight, { intensity: 250, duration: 2, ease: 'power2.inOut' });
 
       // Reveal canvas after one frame so the CSS transition fires
       requestAnimationFrame(() => {
@@ -208,6 +315,11 @@ export function createGameScene(stateManager) {
 
     exit() {
       gsap.killTweensOf(spotlight);
+      if (highlights) {
+        highlights.tweens.forEach((t) => t.kill());
+        highlights.objects.forEach((o) => scene.remove(o));
+        highlights = null;
+      }
       cancelAnimationFrame(rafId);
       rafId = null;
       window.removeEventListener('resize', onResize);
