@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { placePieces, squareToPosition } from '../three/pieces.js';
 import { getLoadedGeometries } from './placard.js';
 import { createGameState } from '../game/state.js';
@@ -109,47 +110,46 @@ function createTable() {
 }
 
 // ---------- Deep Blue figurine ----------
-// A dark metallic monolith sitting on the white side of the table,
-// representing the computer opponent. Two geometries: body + inset panel.
+// Loaded from /models/deepblue.gltf and placed on the white side of the table.
+//
+// Model bounding box (after root matrix y-up conversion):
+//   height ≈ 45.3 model-units  →  scale 0.05  →  ~2.27 world-units tall
+//   width  ≈ 25.8 model-units  →  scale 0.05  →  ~1.29 world-units wide
+// Bottom of model at y ≈ 0.87 model-units → 0.044 world-units after scaling.
 
 const TABLE_TOP_Y = TABLE_Y + TABLE_H / 2; // = -0.15 (flush with board bottom)
+const DB_SCALE    = 0.086; // ~3× king height (king = 1.3 units → target ≈ 3.9 units)
+const DB_BOTTOM   = 0.87 * DB_SCALE; // model's lowest y after scaling
 
-function createDeepBlueFigurine() {
-  const group = new THREE.Group();
+function loadDeepBlueFigurine(scene) {
+  // Dedicated blue-tinted point light to illuminate the model from the front.
+  // Starts dim so it doesn't wash out the board; brightens with the spotlight.
+  const dbLight = new THREE.PointLight('#4488ff', 8, 6);
+  dbLight.position.set(0, 1.5, -3.5); // between board and model
+  scene.add(dbLight);
 
-  // Dark steel body — visible but not bright; slight blue tint for "Deep Blue"
-  const monolithMat = new THREE.MeshStandardMaterial({
-    color:     '#1c2a3a',
-    metalness: 0.85,
-    roughness: 0.15,
-    emissive:  '#0a1520',
-    emissiveIntensity: 0.3,
-  });
+  const loader = new GLTFLoader();
+  loader.load(
+    '/models/deepblue.gltf',
+    (gltf) => {
+      const model = gltf.scene;
+      model.scale.setScalar(DB_SCALE);
+      model.position.set(0, TABLE_TOP_Y - DB_BOTTOM, -4.8);
 
-  // Main body — tall narrow monolith, 2× bigger than before
-  const bodyH = 2.2;
-  const body  = new THREE.Mesh(new THREE.BoxGeometry(0.8, bodyH, 0.3), monolithMat);
-  body.position.y = bodyH / 2;
-  body.castShadow    = true;
-  body.receiveShadow = true;
-  group.add(body);
+      model.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow    = true;
+          child.receiveShadow = true;
+          child.material.emissive    = new THREE.Color('#1040c0');
+          child.material.emissiveIntensity = 0.6;
+        }
+      });
 
-  // Glowing blue face panel — the "screen"
-  const panelMat = new THREE.MeshStandardMaterial({
-    color:             '#051030',
-    metalness:         0.4,
-    roughness:         0.5,
-    emissive:          '#1040c0',
-    emissiveIntensity: 1.2,
-  });
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.3, 0.04), panelMat);
-  panel.position.set(0, bodyH * 0.50, 0.17);
-  group.add(panel);
-
-  // Sit on the table, centred x, just behind the white-side board border
-  group.position.set(0, TABLE_TOP_Y, -4.8);
-
-  return group;
+      scene.add(model);
+    },
+    undefined,
+    (err) => console.error('Deep Blue model failed to load:', err),
+  );
 }
 
 // ---------- piece highlight system ----------
@@ -223,7 +223,7 @@ function setupScene() {
 
   scene.add(createBoard());
   scene.add(createTable());
-  scene.add(createDeepBlueFigurine());
+  loadDeepBlueFigurine(scene);
 
   return { scene, spotlight };
 }
