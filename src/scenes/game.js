@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { placePieces, squareToPosition } from '../three/pieces.js';
 import { getLoadedGeometries } from './placard.js';
+import { createGameState } from '../game/state.js';
+import { createScrollController } from '../scroll/controller.js';
 
 const DARK_SQUARE  = '#5C3A21';
 const LIGHT_SQUARE = '#F0D9B5';
@@ -235,17 +237,51 @@ function createCamera() {
   return cam;
 }
 
-// ---------- scene factory ----------
+// ── Scroll prompt ──────────────────────────────────────────────────────────────
+// A "Scroll to continue ↓" hint shown after the board reveals.
+// Fades out when the first scroll event fires.
+
+let scrollPromptEl = null;
+
+function showScrollPrompt() {
+  if (scrollPromptEl) return;
+
+  scrollPromptEl = document.createElement('div');
+  scrollPromptEl.id = 'scroll-prompt';
+  scrollPromptEl.innerHTML =
+    '<span class="scroll-prompt-text">Scroll to continue</span>' +
+    '<div class="scroll-prompt-arrow">↓</div>';
+
+  document.body.appendChild(scrollPromptEl);
+
+  // Trigger CSS fade-in on the next frame so the transition fires.
+  requestAnimationFrame(() => {
+    if (scrollPromptEl) scrollPromptEl.classList.add('visible');
+  });
+}
+
+function hideScrollPrompt() {
+  if (!scrollPromptEl) return;
+  const el = scrollPromptEl;
+  scrollPromptEl = null;
+  el.classList.remove('visible');
+  // Remove from DOM after the fade-out transition completes.
+  el.addEventListener('transitionend', () => el.remove(), { once: true });
+}
+
+// ── Scene factory ──────────────────────────────────────────────────────────────
 
 export function createGameScene(stateManager) {
-  let containerEl   = null;
-  let renderer      = null;
-  let scene         = null;
-  let camera        = null;
-  let spotlight     = null;
-  let rafId         = null;
-  let pieceRegistry = null;
-  let highlights    = null; // { objects, tweens }
+  let containerEl      = null;
+  let renderer         = null;
+  let scene            = null;
+  let camera           = null;
+  let spotlight        = null;
+  let rafId            = null;
+  let pieceRegistry    = null;
+  let highlights       = null; // { objects, tweens }
+  let gameState        = null;
+  let scrollController = null;
 
   function setupRenderer() {
     containerEl = document.createElement('div');
@@ -304,7 +340,24 @@ export function createGameScene(stateManager) {
 
       // Light fades in over 2s — spotlight starts at 0 to support re-entry
       spotlight.intensity = 0;
-      gsap.to(spotlight, { intensity: 250, duration: 2, ease: 'power2.inOut' });
+      gsap.to(spotlight, {
+        intensity: 250,
+        duration: 2,
+        ease: 'power2.inOut',
+        onComplete() {
+          // Initialise scroll system once the board is fully revealed.
+          if (!gameState) {
+            gameState = createGameState();
+          }
+          if (!scrollController) {
+            scrollController = createScrollController(gameState, () => {
+              // First-scroll callback — hide the prompt.
+              hideScrollPrompt();
+            });
+          }
+          showScrollPrompt();
+        },
+      });
 
       // Reveal canvas after one frame so the CSS transition fires
       requestAnimationFrame(() => {
@@ -320,6 +373,11 @@ export function createGameScene(stateManager) {
         highlights.objects.forEach((o) => scene.remove(o));
         highlights = null;
       }
+      if (scrollController) {
+        scrollController.destroy();
+        scrollController = null;
+      }
+      hideScrollPrompt();
       cancelAnimationFrame(rafId);
       rafId = null;
       window.removeEventListener('resize', onResize);
@@ -327,7 +385,7 @@ export function createGameScene(stateManager) {
         containerEl.style.opacity      = '0';
         containerEl.style.pointerEvents = 'none';
       }
-      // Renderer, scene, spotlight kept alive — re-entrant (CINEMATIC → GAME)
+      // Renderer, scene, spotlight, gameState kept alive — re-entrant (CINEMATIC → GAME)
     },
   };
 }
