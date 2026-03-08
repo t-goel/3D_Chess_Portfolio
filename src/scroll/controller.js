@@ -73,7 +73,12 @@ export function createScrollController(gameState, onFirstScroll) {
 
       onEnter() {
         if (consumed) return;
+
         consumed = true;
+        console.log(
+          `%c[Scroll] ▶ Segment ${i} "${segment.id}" | type: ${segment.type}${segment.moveIndex !== undefined ? ` | moveIndex: ${segment.moveIndex}` : ''}`,
+          'color: #8f8; font-weight: bold'
+        );
 
         // Notify the prompt to hide (only fires once).
         if (!firstScrollFired) {

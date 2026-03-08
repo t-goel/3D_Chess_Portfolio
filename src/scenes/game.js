@@ -312,10 +312,8 @@ export function createGameScene(stateManager) {
       pieceRegistry = placePieces(scene, geometries);
     }
 
-    // Highlight first move: black c7 pawn → c6
-    if (!highlights) {
-      highlights = createHighlights(scene, 'c7', 'c6');
-    }
+    // Highlights are now managed by the game state via onHighlightChange callback.
+    // The initial highlight (c7→c6) will be set after Deep Blue's opening move.
   }
 
   function tick() {
@@ -345,17 +343,38 @@ export function createGameScene(stateManager) {
         duration: 2,
         ease: 'power2.inOut',
         onComplete() {
-          // Initialise scroll system once the board is fully revealed.
+          // Initialise game state with scene refs once the board is revealed.
           if (!gameState) {
-            gameState = createGameState();
-          }
-          if (!scrollController) {
-            scrollController = createScrollController(gameState, () => {
-              // First-scroll callback — hide the prompt.
-              hideScrollPrompt();
+            gameState = createGameState({
+              scene,
+              camera,
+              pieceRegistry,
+              stateManager,
+              onHighlightChange(from, to) {
+                // Remove existing highlights
+                if (highlights) {
+                  highlights.tweens.forEach((t) => t.kill());
+                  highlights.objects.forEach((o) => scene.remove(o));
+                  highlights = null;
+                }
+                // Create new highlights if squares are provided
+                if (from && to) {
+                  highlights = createHighlights(scene, from, to);
+                }
+              },
             });
           }
-          showScrollPrompt();
+
+          // Auto-play Deep Blue's opening move (1. e4), then start the scroll system.
+          gameState.initialize().then(() => {
+            if (!scrollController) {
+              scrollController = createScrollController(gameState, () => {
+                // First-scroll callback — hide the prompt.
+                hideScrollPrompt();
+              });
+            }
+            showScrollPrompt();
+          });
         },
       });
 
